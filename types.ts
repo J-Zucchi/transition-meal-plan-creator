@@ -33,4 +33,5 @@ export interface UserSettings {
   calories: number;
   cookingStyle: CookingStyle;
   exclusions: string;
+  preferences: string;
 }

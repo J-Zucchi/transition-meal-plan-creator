@@ -81,11 +81,15 @@ export const generateMealPlan = async (
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  const { gender, calories, cookingStyle, exclusions } = settings;
+  const { gender, calories, cookingStyle, exclusions, preferences } = settings;
 
-  const proteinTarget = calories >= 1350 ? "120-130g" : "approx 100g";
-  const carbsTarget =
-    calories < 1400 ? "60-100g" : "100-150g (Focus on fiber-rich sources)";
+  // Calculate macro targets based on the requested 35/35/30 split
+  // Protein: 35% (4 cal/g)
+  // Carbs: 35% (4 cal/g)
+  // Fat: 30% (9 cal/g)
+  const proteinGrams = Math.round((calories * 0.35) / 4);
+  const carbGrams = Math.round((calories * 0.35) / 4);
+  const fatGrams = Math.round((calories * 0.30) / 9);
 
   const randomInstruction = VARIETY_INSTRUCTIONS[Math.floor(Math.random() * VARIETY_INSTRUCTIONS.length)];
 
@@ -96,11 +100,15 @@ export const generateMealPlan = async (
     Target Calories: ${calories}
     Cooking Style: ${cookingStyle}
     Exclusions/Allergies: ${exclusions || "None"}
+    Patient Preferences/Favorite Foods: ${preferences || "None"}
 
-    Nutritional Goals:
-    - Protein Target: ${proteinTarget}. Critical for muscle mass.
-    - Carbs Target: ${carbsTarget}.
-    - IMPORTANT: NOT a ketogenic diet. Focus on quality sources.
+    Nutritional Goals (35/35/30 Split):
+    - Protein: Approximately 35% of total calories. Target: ~${proteinGrams}g. (Allow +/- 5% variance).
+    - Carbs: Approximately 35% of total calories. Target: ~${carbGrams}g. (Allow +/- 5% variance).
+    - Fats: Approximately 30% of total calories. Target: ~${fatGrams}g. (Allow +/- 5% variance).
+    
+    *Guidance*: 
+    - Ensure meals feel "normal" and sustainable within these macros.
     - Hydration: Implicitly encourage water intake.
 
     Style & Complexity Guidelines:
@@ -119,6 +127,7 @@ export const generateMealPlan = async (
     CRITICAL INSTRUCTION:
     For EACH of the 5 slots, provide exactly 3 DISTINCT options (Option A, Option B, Option C).
     - Ensure the 3 options are different in main ingredients/flavor (e.g., one egg-based, one yogurt-based, one oat-based).
+    - If the user specified preferences (e.g., "Italian"), ensure at least one option reflects that.
     - Ensure all options fit the macro goals for that time of day.
 
     Format Requirements:

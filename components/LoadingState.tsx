@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Loader2, ChefHat, Calculator, ShoppingCart, Sparkles } from 'lucide-react';
 
@@ -15,9 +16,10 @@ const LoadingState: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
+    // Increased duration from 1800ms to 3500ms to better match API latency
     const interval = setInterval(() => {
       setCurrentStep((prev) => (prev < MESSAGES.length - 1 ? prev + 1 : prev));
-    }, 1800); // Change message every 1.8 seconds
+    }, 3500); 
 
     return () => clearInterval(interval);
   }, []);
@@ -40,7 +42,7 @@ const LoadingState: React.FC = () => {
         {MESSAGES[currentStep].text}
       </h3>
       <p className="text-sm text-gray-500 mb-6">
-        This usually takes about 10-15 seconds.
+        This usually takes about 20-30 seconds.
       </p>
 
       {/* Progress Bar */}

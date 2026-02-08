@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Header from './components/Header';
 import SettingsPanel from './components/SettingsPanel';
@@ -16,6 +17,7 @@ const App: React.FC = () => {
     calories: 1100,
     cookingStyle: 'Balanced Mix',
     exclusions: '',
+    preferences: '',
   });
 
   const [mealPlan, setMealPlan] = useState<MealPlanResponse | null>(null);

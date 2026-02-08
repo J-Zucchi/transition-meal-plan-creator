@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { UserSettings, Gender, CookingStyle } from '../types';
 import { Clock, Sliders, ChefHat, Sparkles, Loader2 } from 'lucide-react';
@@ -27,6 +28,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSettings, on
 
   const handleExclusionsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSettings(prev => ({ ...prev, exclusions: e.target.value }));
+  };
+
+  const handlePreferencesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setSettings(prev => ({ ...prev, preferences: e.target.value }));
   };
 
   return (
@@ -106,19 +111,31 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSettings, on
         </div>
 
         {/* Exclusions */}
-        <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-3">
-          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Exclusions / Allergies</label>
+        <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-2">
+          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Exclusions / Allergies (Optional)</label>
           <input 
              type="text" 
-             placeholder="e.g., No shellfish, gluten-free, dislike mushrooms..."
+             placeholder="e.g., No shellfish, gluten-free..."
              value={settings.exclusions}
              onChange={handleExclusionsChange}
              className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 focus:bg-white focus:ring-2 focus:ring-[#003B5C] focus:border-transparent outline-none transition-all"
           />
         </div>
 
+        {/* Specific Requests */}
+        <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-2">
+          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Specific Requests / Favorite Foods (Optional)</label>
+          <textarea 
+             placeholder="e.g., I love Italian food, or need a portable lunch for work..."
+             value={settings.preferences}
+             onChange={handlePreferencesChange}
+             rows={1}
+             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 focus:bg-white focus:ring-2 focus:ring-[#003B5C] focus:border-transparent outline-none transition-all resize-none overflow-hidden h-[50px] focus:h-[80px]"
+          />
+        </div>
+
         {/* Generate Button */}
-        <div className="md:col-span-2 lg:col-span-1">
+        <div className="md:col-span-2 lg:col-span-4 mt-2">
           <button
             onClick={onGenerate}
             disabled={isLoading}
