@@ -62,6 +62,15 @@ const VARIETY_INSTRUCTIONS = [
   "Ensure dinner feels substantial but uses standard supermarket ingredients.",
 ];
 
+// Priority list of models to try.
+// If the first one hits a rate limit (429), we try the next.
+// This effectively multiplies the daily free tier limit.
+const MODELS_TO_TRY = [
+  "gemini-3-flash-preview",   // Smartest Flash model
+  "gemini-flash-latest",      // Standard Flash (Stable, usually high limits)
+  "gemini-flash-lite-latest"  // Fastest/Cheapest backup
+];
+
 export const generateMealPlan = async (
   settings: UserSettings
 ): Promise<MealPlanResponse> => {
@@ -110,35 +119,44 @@ export const generateMealPlan = async (
     - No markdown formatting.
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.7,
-      },
-    });
+  let lastError: any = null;
 
-    if (response.text) {
-      return JSON.parse(response.text) as MealPlanResponse;
-    } else {
-      throw new Error("Empty response from AI");
+  for (const model of MODELS_TO_TRY) {
+    try {
+      console.log(`Attempting generation with model: ${model}`);
+      
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA,
+          temperature: 0.7,
+        },
+      });
+
+      if (response.text) {
+        return JSON.parse(response.text) as MealPlanResponse;
+      }
+    } catch (error: any) {
+      console.warn(`Model ${model} failed:`, error.message);
+      lastError = error;
+      
+      // If the error is NOT a quota/server error (e.g., it's a prompt safety error), 
+      // we generally still want to try the next model just in case, 
+      // but primarily we are catching 429 (Too Many Requests) and 503 (Overloaded).
     }
-  } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    
-    // Extract a more meaningful error message if possible
-    let errorMessage = "Failed to generate meal plan.";
-    
-    if (error.message) {
-      if (error.message.includes("403")) errorMessage += " (Access Denied/Invalid Key)";
-      else if (error.message.includes("429")) errorMessage += " (Quota Exceeded)";
-      else if (error.message.includes("404")) errorMessage += " (Model Not Found)";
-      else errorMessage += ` ${error.message}`;
-    }
-    
-    throw new Error(errorMessage);
   }
+
+  // If we get here, all models failed
+  console.error("All models failed. Last error:", lastError);
+  
+  let errorMessage = "Failed to generate meal plan after multiple attempts.";
+  if (lastError?.message) {
+    if (lastError.message.includes("429")) errorMessage += " (Daily Quota Exceeded)";
+    else if (lastError.message.includes("403")) errorMessage += " (Access Denied)";
+    else errorMessage += ` (${lastError.message})`;
+  }
+  
+  throw new Error(errorMessage);
 };

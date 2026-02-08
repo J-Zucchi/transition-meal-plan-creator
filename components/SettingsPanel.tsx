@@ -30,7 +30,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSettings, on
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 print:hidden">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
         
         {/* Gender Toggle */}

@@ -26,27 +26,27 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ meals }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden h-fit sticky top-6">
-      <div className="bg-[#003B5C] p-4 flex justify-between items-center text-white">
+    <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden h-fit sticky top-6 print:static print:shadow-none print:border print:border-gray-200">
+      <div className="bg-[#003B5C] p-4 flex justify-between items-center text-white print:bg-white print:text-black print:border-b print:border-gray-200">
         <h3 className="font-bold flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5 text-[#EAAA00]" />
+          <ShoppingCart className="w-5 h-5 text-[#EAAA00] print:text-black" />
           Shopping List
         </h3>
-        <span className="text-xs bg-[#ffffff20] px-2 py-1 rounded-full">{ingredients.length} items</span>
+        <span className="text-xs bg-[#ffffff20] px-2 py-1 rounded-full print:bg-gray-100 print:text-black">{ingredients.length} items</span>
       </div>
       
-      <div className="p-4 max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar">
-        <ul className="space-y-3">
+      <div className="p-4 max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar print:max-h-none print:overflow-visible">
+        <ul className="space-y-3 print:space-y-1">
           {ingredients.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 border-b border-gray-50 pb-2 last:border-0">
-              <input type="checkbox" className="mt-1 rounded border-gray-300 text-[#003B5C] focus:ring-[#003B5C] cursor-pointer" />
-              <span className="leading-snug">{item}</span>
+            <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 border-b border-gray-50 pb-2 last:border-0 print:border-none print:pb-1">
+              <input type="checkbox" className="mt-1 rounded border-gray-300 text-[#003B5C] focus:ring-[#003B5C] cursor-pointer print:border-gray-400 print:text-black" />
+              <span className="leading-snug print:text-black">{item}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      <div className="p-4 bg-gray-50 border-t border-gray-100">
+      <div className="p-4 bg-gray-50 border-t border-gray-100 print:hidden">
         <button
           onClick={handleCopy}
           className={`w-full py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold transition-all duration-200 ${

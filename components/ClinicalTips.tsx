@@ -3,7 +3,7 @@ import { ShieldCheck, Droplets, UtensilsCrossed } from 'lucide-react';
 
 const ClinicalTips: React.FC = () => {
   return (
-    <div className="bg-[#003B5C] text-white rounded-xl shadow-lg p-6 mb-8">
+    <div className="bg-[#003B5C] text-white rounded-xl shadow-lg p-6 mb-8 print:hidden">
       <h2 className="text-xl font-bold mb-4 flex items-center gap-2 border-b border-[#ffffff30] pb-2">
         <ShieldCheck className="w-6 h-6 text-[#EAAA00]" />
         Transition Clinical Tips
