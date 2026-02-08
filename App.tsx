@@ -44,7 +44,7 @@ const App: React.FC = () => {
       
       <main className="flex-grow max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full print:p-0">
         
-        <div className="space-y-8 print:space-y-4">
+        <div className="space-y-8 print:space-y-6">
           <SettingsPanel 
             settings={settings}
             setSettings={setSettings}
@@ -65,8 +65,8 @@ const App: React.FC = () => {
           {mealPlan && !isLoading && (
              <div className="animate-fadeIn">
                
-               <div className="flex items-center justify-between mb-6 print:mb-4">
-                  <h2 className="text-2xl font-bold text-[#003B5C] print:text-black">Your Daily Plan</h2>
+               <div className="flex items-center justify-between mb-6 print:mb-2">
+                  <h2 className="text-2xl font-bold text-[#003B5C] print:text-xl print:text-black">Your Daily Plan</h2>
                   
                   <button 
                     onClick={handlePrint}
@@ -79,7 +79,7 @@ const App: React.FC = () => {
                
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:block">
                  {/* Left Column: Meals */}
-                 <div className="lg:col-span-2 space-y-6 print:space-y-4 print:mb-8">
+                 <div className="lg:col-span-2 space-y-6 print:space-y-6 print:mb-8">
                     <DailySummary summary={mealPlan.summary} />
                     
                     <div className="space-y-4 print:space-y-6">
@@ -122,7 +122,14 @@ const App: React.FC = () => {
             print-color-adjust: exact;
           }
           @page {
-            margin: 1cm;
+            margin: 2cm; /* Increased from 1cm to 2cm */
+          }
+          /* GLOBAL OVERRIDE: Force elements with this class to appear in print */
+          .print-force-visible {
+            display: block !important;
+            opacity: 1 !important;
+            height: auto !important;
+            visibility: visible !important;
           }
         }
       `}</style>
