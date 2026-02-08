@@ -1,54 +1,55 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserSettings, MealPlanResponse } from "../types";
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    summary: {
-      type: Type.OBJECT,
-      properties: {
-        calories: { type: Type.NUMBER },
-        protein: { type: Type.NUMBER },
-        carbs: { type: Type.NUMBER },
-        fat: { type: Type.NUMBER },
-      },
-      required: ["calories", "protein", "carbs", "fat"],
-    },
-    meals: {
+    slots: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          type: { type: Type.STRING },
           title: { type: Type.STRING },
-          description: { type: Type.STRING },
-          prepTime: { type: Type.STRING },
-          macros: {
-            type: Type.OBJECT,
-            properties: {
-              calories: { type: Type.NUMBER },
-              protein: { type: Type.NUMBER },
-              carbs: { type: Type.NUMBER },
-              fat: { type: Type.NUMBER },
+          options: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                prepTime: { type: Type.STRING },
+                macros: {
+                  type: Type.OBJECT,
+                  properties: {
+                    calories: { type: Type.NUMBER },
+                    protein: { type: Type.NUMBER },
+                    carbs: { type: Type.NUMBER },
+                    fat: { type: Type.NUMBER },
+                  },
+                  required: ["calories", "protein", "carbs", "fat"],
+                },
+                ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                instructions: { type: Type.ARRAY, items: { type: Type.STRING } },
+              },
+              required: [
+                "type",
+                "title",
+                "description",
+                "prepTime",
+                "macros",
+                "ingredients",
+                "instructions",
+              ],
             },
-            required: ["calories", "protein", "carbs", "fat"],
           },
-          ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
-          instructions: { type: Type.ARRAY, items: { type: Type.STRING } },
         },
-        required: [
-          "type",
-          "title",
-          "description",
-          "prepTime",
-          "macros",
-          "ingredients",
-          "instructions",
-        ],
+        required: ["title", "options"],
       },
     },
   },
-  required: ["summary", "meals"],
+  required: ["slots"],
 };
 
 const VARIETY_INSTRUCTIONS = [
@@ -63,8 +64,6 @@ const VARIETY_INSTRUCTIONS = [
 ];
 
 // Priority list of models to try.
-// If the first one hits a rate limit (429), we try the next.
-// This effectively multiplies the daily free tier limit.
 const MODELS_TO_TRY = [
   "gemini-3-flash-preview",   // Smartest Flash model
   "gemini-flash-latest",      // Standard Flash (Stable, usually high limits)
@@ -74,14 +73,12 @@ const MODELS_TO_TRY = [
 export const generateMealPlan = async (
   settings: UserSettings
 ): Promise<MealPlanResponse> => {
-  // 1. Check for API Key explicitly
   if (!process.env.API_KEY) {
     throw new Error(
       "API Key is missing. Please ensure you have added 'API_KEY' to your Netlify Site Settings > Environment Variables."
     );
   }
 
-  // Initialize Gemini Client inside the function to ensure env vars are loaded
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const { gender, calories, cookingStyle, exclusions } = settings;
@@ -94,7 +91,7 @@ export const generateMealPlan = async (
 
   const prompt = `
     You are an expert medical nutritionist for Transition Medical Weight Loss.
-    Create a 1-day meal plan for a ${gender} patient.
+    Create a 1-day meal plan for a ${gender} patient with multiple options per meal.
     
     Target Calories: ${calories}
     Cooking Style: ${cookingStyle}
@@ -112,7 +109,17 @@ export const generateMealPlan = async (
     - VARIETY HINT: ${randomInstruction}
 
     Structure:
-    Generate exactly 5 meals: Breakfast, Morning Snack, Lunch, Afternoon Snack, Dinner.
+    Generate exactly 5 meal slots in this order: 
+    1. Breakfast
+    2. Morning Snack
+    3. Lunch
+    4. Afternoon Snack
+    5. Dinner
+    
+    CRITICAL INSTRUCTION:
+    For EACH of the 5 slots, provide exactly 3 DISTINCT options (Option A, Option B, Option C).
+    - Ensure the 3 options are different in main ingredients/flavor (e.g., one egg-based, one yogurt-based, one oat-based).
+    - Ensure all options fit the macro goals for that time of day.
 
     Format Requirements:
     - Return strictly pure JSON matching the schema.
@@ -141,14 +148,9 @@ export const generateMealPlan = async (
     } catch (error: any) {
       console.warn(`Model ${model} failed:`, error.message);
       lastError = error;
-      
-      // If the error is NOT a quota/server error (e.g., it's a prompt safety error), 
-      // we generally still want to try the next model just in case, 
-      // but primarily we are catching 429 (Too Many Requests) and 503 (Overloaded).
     }
   }
 
-  // If we get here, all models failed
   console.error("All models failed. Last error:", lastError);
   
   let errorMessage = "Failed to generate meal plan after multiple attempts.";

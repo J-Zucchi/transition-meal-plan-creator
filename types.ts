@@ -1,3 +1,4 @@
+
 export interface Macro {
   calories: number;
   protein: number;
@@ -15,9 +16,13 @@ export interface Meal {
   instructions: string[];
 }
 
+export interface MealSlot {
+  title: string;
+  options: Meal[];
+}
+
 export interface MealPlanResponse {
-  summary: Macro;
-  meals: Meal[];
+  slots: MealSlot[];
 }
 
 export type Gender = 'Female' | 'Male';

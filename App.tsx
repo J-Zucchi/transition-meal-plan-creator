@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Header from './components/Header';
 import SettingsPanel from './components/SettingsPanel';
 import ClinicalTips from './components/ClinicalTips';
 import MealCard from './components/MealCard';
 import DailySummary from './components/DailySummary';
 import ShoppingList from './components/ShoppingList';
-import { UserSettings, MealPlanResponse } from './types';
+import LoadingState from './components/LoadingState';
+import { UserSettings, MealPlanResponse, Macro } from './types';
 import { generateMealPlan } from './services/geminiService';
 import { AlertCircle, Printer } from 'lucide-react';
 
@@ -18,15 +19,22 @@ const App: React.FC = () => {
   });
 
   const [mealPlan, setMealPlan] = useState<MealPlanResponse | null>(null);
+  // Track selected option index for each slot: { 0: 0, 1: 2, ... }
+  const [selections, setSelections] = useState<number[]>([]); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setIsLoading(true);
     setError(null);
+    // Clear previous results while loading to focus on the loading state
+    setMealPlan(null); 
+    
     try {
       const data = await generateMealPlan(settings);
       setMealPlan(data);
+      // Initialize selections: Select option 0 for all slots
+      setSelections(new Array(data.slots.length).fill(0));
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -37,6 +45,36 @@ const App: React.FC = () => {
   const handlePrint = () => {
     window.print();
   };
+
+  const handleSwap = (slotIndex: number) => {
+    if (!mealPlan) return;
+    setSelections(prev => {
+      const next = [...prev];
+      const currentOption = next[slotIndex];
+      const totalOptions = mealPlan.slots[slotIndex].options.length;
+      next[slotIndex] = (currentOption + 1) % totalOptions;
+      return next;
+    });
+  };
+
+  // Compute the currently active set of meals based on selections
+  const activeMeals = useMemo(() => {
+    if (!mealPlan || selections.length === 0) return [];
+    return mealPlan.slots.map((slot, index) => {
+      const selectedIndex = selections[index] || 0;
+      return slot.options[selectedIndex];
+    });
+  }, [mealPlan, selections]);
+
+  // Compute summary dynamically from active meals
+  const currentSummary: Macro = useMemo(() => {
+    return activeMeals.reduce((acc, meal) => ({
+      calories: acc.calories + meal.macros.calories,
+      protein: acc.protein + meal.macros.protein,
+      carbs: acc.carbs + meal.macros.carbs,
+      fat: acc.fat + meal.macros.fat,
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  }, [activeMeals]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-slate-800 print:bg-white">
@@ -62,7 +100,9 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {mealPlan && !isLoading && (
+          {isLoading && <LoadingState />}
+
+          {mealPlan && activeMeals.length > 0 && !isLoading && (
              <div className="animate-fadeIn">
                
                <div className="flex items-center justify-between mb-6 print:mb-2">
@@ -80,24 +120,31 @@ const App: React.FC = () => {
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:block">
                  {/* Left Column: Meals */}
                  <div className="lg:col-span-2 space-y-6 print:space-y-6 print:mb-8">
-                    <DailySummary summary={mealPlan.summary} />
+                    <DailySummary summary={currentSummary} />
                     
                     <div className="space-y-4 print:space-y-6">
-                      {mealPlan.meals.map((meal, index) => (
-                        <MealCard key={index} meal={meal} />
+                      {activeMeals.map((meal, index) => (
+                        <MealCard 
+                          key={`${index}-${selections[index]}`} // Force re-render on swap
+                          meal={meal} 
+                          slotTitle={mealPlan.slots[index].title}
+                          onSwap={() => handleSwap(index)}
+                          optionIndex={selections[index]}
+                          totalOptions={mealPlan.slots[index].options.length}
+                        />
                       ))}
                     </div>
                  </div>
 
                  {/* Right Column: Shopping List */}
                  <div className="lg:col-span-1 print:break-before-page">
-                   <ShoppingList meals={mealPlan.meals} />
+                   <ShoppingList meals={activeMeals} />
                  </div>
                </div>
              </div>
           )}
 
-          <ClinicalTips />
+          {!isLoading && !mealPlan && !error && <ClinicalTips />}
         </div>
       </main>
 
@@ -122,7 +169,7 @@ const App: React.FC = () => {
             print-color-adjust: exact;
           }
           @page {
-            margin: 2cm; /* Increased from 1cm to 2cm */
+            margin: 2cm;
           }
           /* GLOBAL OVERRIDE: Force elements with this class to appear in print */
           .print-force-visible {

@@ -10,10 +10,12 @@ const Header: React.FC = () => {
           className="h-24 w-auto object-contain"
         />
         
-        <div className="text-center max-w-2xl">
-          <h1 className="text-3xl font-bold text-[#003B5C] mb-2">Transition Meal Plan Generator</h1>
+        <div className="text-center max-w-3xl">
+          <h1 className="text-3xl font-bold text-[#003B5C] mb-3">Transition Meal Plan Generator</h1>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Daily meal ideas designed to fit the Transition program. Simply adjust your preferences below and click "Generate Plan" to get started.
+            Experience our advanced AI nutritionist. Each plan includes complete recipes, step-by-step instructions, and detailed macros. 
+            <span className="font-semibold text-[#003B5C]"> New:</span> Use the <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-50 text-[#003B5C] rounded mx-1 text-xs">⟳</span> 
+            <span className="font-semibold">Swap Option</span> button to customize each meal to your taste—your daily totals and shopping list will update instantly!
           </p>
         </div>
       </div>

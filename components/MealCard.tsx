@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Meal } from '../types';
-import { ChevronDown, ChevronUp, Clock, Flame, Dumbbell, Wheat, Droplet } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Flame, Dumbbell, Wheat, Droplet, RefreshCw } from 'lucide-react';
 
 interface MealCardProps {
   meal: Meal;
+  slotTitle: string;
+  onSwap?: () => void;
+  optionIndex: number;
+  totalOptions: number;
 }
 
-const MealCard: React.FC<MealCardProps> = ({ meal }) => {
+const MealCard: React.FC<MealCardProps> = ({ meal, slotTitle, onSwap, optionIndex, totalOptions }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -19,21 +23,42 @@ const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       >
         <div className="flex justify-between items-start">
           <div className="w-full">
+            
+            {/* Slot Title (e.g. BREAKFAST) */}
+            <div className="flex items-center justify-between mb-2 print:mb-1">
+              <h4 className="text-xs font-extrabold text-[#EAAA00] uppercase tracking-widest print:text-black print:text-[10px]">
+                {slotTitle}
+              </h4>
+
+               {/* Swap Button - Hidden in Print */}
+               {onSwap && totalOptions > 1 && (
+                 <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     onSwap();
+                   }}
+                   className="flex items-center gap-1.5 text-xs font-medium text-[#003B5C] bg-blue-50 hover:bg-[#EAAA00] hover:text-[#003B5C] px-2 py-1 rounded-md transition-all print:hidden group z-10"
+                   title="Try a different option"
+                 >
+                   <RefreshCw className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-500" />
+                   <span>Option {optionIndex + 1}/{totalOptions}</span>
+                 </button>
+               )}
+            </div>
+
+            {/* Tags Row */}
             <div className="flex items-center gap-2 mb-2 print:mb-1">
-               <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold uppercase rounded tracking-wider print:bg-transparent print:p-0 print:text-gray-500 print:text-[10px]">
-                 {meal.type}
-               </span>
-               <span className="hidden print:inline text-gray-400 text-[10px]">•</span>
-               <span className="hidden print:inline text-gray-500 text-[10px]">{meal.prepTime}</span>
+                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold uppercase rounded tracking-wider print:bg-transparent print:p-0 print:text-gray-500">
+                  {meal.type}
+                </span>
+                <span className="text-gray-300">•</span>
+                <span className="flex items-center gap-1 text-gray-500 text-[10px] uppercase font-bold tracking-wide print:text-gray-500">
+                  <Clock className="w-3 h-3 print:hidden" /> 
+                  {meal.prepTime}
+                </span>
             </div>
             
             <h3 className="text-lg font-bold text-gray-900 leading-tight print:text-base">{meal.title}</h3>
-            
-            <div className="flex items-center text-gray-500 text-xs mt-1 space-x-3 print:hidden">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {meal.prepTime}
-              </span>
-            </div>
             
             {/* Description: Shown in header only on screen if collapsed. Hidden in print (shown in body instead). */}
             <div className={`${isExpanded ? 'hidden' : 'block'} print:hidden`}>
@@ -41,7 +66,7 @@ const MealCard: React.FC<MealCardProps> = ({ meal }) => {
             </div>
           </div>
           
-          <button className="text-gray-400 hover:text-[#003B5C] transition-colors print:hidden ml-4">
+          <button className="text-gray-400 hover:text-[#003B5C] transition-colors print:hidden ml-4 mt-6">
             {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
         </div>
@@ -81,7 +106,6 @@ const MealCard: React.FC<MealCardProps> = ({ meal }) => {
       </div>
 
       {/* Expanded Content */}
-      {/* Added 'print-force-visible' to guarantee this block displays when printing, regardless of isExpanded state */}
       <div className={`${isExpanded ? 'block border-t border-gray-100 bg-gray-50/50' : 'hidden'} p-5 animate-fadeIn print-force-visible print:bg-white print:p-0 print:pt-2 print:pb-4 print:border-none print:animate-none`}>
         <p className="text-sm text-gray-600 italic mb-4 print:text-gray-800 print:mb-3 print:text-xs">{meal.description}</p>
         
