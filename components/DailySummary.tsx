@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Macro } from '../types';
 import { Flame, Dumbbell, Wheat, Droplet } from 'lucide-react';
@@ -8,7 +9,7 @@ interface DailySummaryProps {
 
 const DailySummary: React.FC<DailySummaryProps> = ({ summary }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 sticky top-4 z-10 print:static print:shadow-none print:border-b print:border-t-0 print:border-x-0 print:border-gray-900 print:rounded-none print:mb-4 print:p-0 print:pb-2">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 print:static print:shadow-none print:border-b print:border-t-0 print:border-x-0 print:border-gray-900 print:rounded-none print:mb-4 print:p-0 print:pb-2">
       
       {/* Screen View Title */}
       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 text-center print:hidden">Daily Totals</h3>
