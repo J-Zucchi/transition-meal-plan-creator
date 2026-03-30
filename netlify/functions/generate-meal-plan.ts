@@ -21,10 +21,10 @@ const RESPONSE_SCHEMA = {
                 macros: {
                   type: Type.OBJECT,
                   properties: {
-                    calories: { type: Type.NUMBER },
-                    protein: { type: Type.NUMBER },
-                    carbs: { type: Type.NUMBER },
-                    fat: { type: Type.NUMBER },
+                    calories: { type: Type.INTEGER, description: "Numeric value only, no units" },
+                    protein: { type: Type.INTEGER, description: "Numeric value only in grams, no units" },
+                    carbs: { type: Type.INTEGER, description: "Numeric value only in grams, no units" },
+                    fat: { type: Type.INTEGER, description: "Numeric value only in grams, no units" },
                   },
                   required: ["calories", "protein", "carbs", "fat"],
                 },

@@ -1,3 +1,9 @@
+import dotenv from "dotenv";
+// Load environment variables from .env.local for local development
+dotenv.config({ path: ".env.local" });
+// Also load from .env as a fallback
+dotenv.config();
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import { handler as generateMealPlanHandler } from "./netlify/functions/generate-meal-plan";
