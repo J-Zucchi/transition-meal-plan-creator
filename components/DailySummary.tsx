@@ -33,7 +33,7 @@ const DailySummary: React.FC<DailySummaryProps> = ({ summary }) => {
         
         {/* Calories */}
         <div className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-lg border border-gray-100 transition-colors">
-          <Flame className="w-5 h-5 text-gray-400 mb-1" />
+          <Flame className="w-5 h-5 text-red-500 mb-1" />
           <span className="text-2xl font-bold text-gray-700 leading-none">{summary.calories}</span>
           <span className="text-[10px] uppercase font-bold text-gray-400 mt-1 tracking-wide">Calories</span>
         </div>

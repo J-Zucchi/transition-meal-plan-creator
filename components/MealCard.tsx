@@ -75,7 +75,7 @@ const MealCard: React.FC<MealCardProps> = ({ meal, slotTitle, onSwap, optionInde
         <div className="mt-4 flex flex-wrap gap-2 print:mt-1 print:gap-3">
            {/* Calories */}
            <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold print:bg-transparent print:p-0 print:text-gray-600">
-              <Flame className="w-3.5 h-3.5 print:hidden" />
+              <Flame className="w-3.5 h-3.5 text-red-500 print:hidden" />
               <span>{meal.macros.calories} kcal</span>
            </div>
            

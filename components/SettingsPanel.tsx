@@ -125,12 +125,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSettings, on
         {/* Specific Requests */}
         <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-2">
           <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Specific Requests / Favorite Foods (Optional)</label>
-          <textarea 
-             placeholder="e.g., Italian food, need portable lunches"
+          <input 
+             type="text"
+             placeholder="e.g., Italian food, portable lunches"
              value={settings.preferences}
              onChange={handlePreferencesChange}
-             rows={1}
-             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 focus:bg-white focus:ring-2 focus:ring-[#003B5C] focus:border-transparent outline-none transition-all resize-none overflow-hidden h-[50px] focus:h-[80px]"
+             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 focus:bg-white focus:ring-2 focus:ring-[#003B5C] focus:border-transparent outline-none transition-all"
           />
         </div>
 
