@@ -164,7 +164,7 @@ export const generateMealPlan = async (
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
           temperature: 0.7,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         },
       });
 

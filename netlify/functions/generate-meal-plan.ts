@@ -163,7 +163,7 @@ export const handler = async (event: any, context: any) => {
             responseMimeType: "application/json",
             responseSchema: RESPONSE_SCHEMA,
             temperature: 0.7,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           },
         });
 
