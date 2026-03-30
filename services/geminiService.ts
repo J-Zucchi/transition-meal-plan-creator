@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { UserSettings, MealPlanResponse } from "../types";
 
 const RESPONSE_SCHEMA = {
@@ -130,13 +130,15 @@ export const generateMealPlan = async (
     - REALISTIC: Ensure meals are easy to prepare.
     - VARIETY HINT: ${randomInstruction}
 
-    Structure:
-    Generate exactly 5 meal slots in this order: 
+    Structure & Calorie Distribution:
+    Generate exactly 5 meal slots in this order:
     1. Breakfast
     2. Morning Snack
     3. Lunch
     4. Afternoon Snack
     5. Dinner
+    
+    Distribute the calories naturally across the 3 main meals and 2 snacks. Ensure that if a user picks ANY combination of options, the daily total will closely match the Target Calories (${calories}) and the daily macro goals.
     
     CRITICAL INSTRUCTION:
     For EACH of the 5 slots, provide exactly 3 DISTINCT options (Option A, Option B, Option C).
@@ -162,6 +164,7 @@ export const generateMealPlan = async (
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
           temperature: 0.7,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         },
       });
 
@@ -171,6 +174,8 @@ export const generateMealPlan = async (
     } catch (error: any) {
       console.warn(`Model ${model} failed:`, error.message);
       lastError = error;
+      // Wait 1.5 seconds before trying the next model to avoid burst rate limits
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
   }
 
