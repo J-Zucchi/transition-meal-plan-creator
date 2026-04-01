@@ -68,10 +68,42 @@ const MODELS_TO_TRY = [
   "gemini-3.1-flash-lite-preview"   // Fastest/Cheapest backup (500 RPD)
 ];
 
-export const generateMealPlan = async (
+function parsePartialJSON(jsonString: string): any {
+  let str = jsonString.trim();
+  if (!str) return null;
+  
+  try { return JSON.parse(str); } catch (e) {}
+  
+  let inString = false;
+  let escape = false;
+  const stack = [];
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (escape) { escape = false; continue; }
+    if (char === '\\') { escape = true; continue; }
+    if (char === '"') { inString = !inString; continue; }
+    
+    if (!inString) {
+      if (char === '{') stack.push('}');
+      else if (char === '[') stack.push(']');
+      else if (char === '}' || char === ']') stack.pop();
+    }
+  }
+  
+  if (inString) str += '"';
+  
+  for (let i = stack.length - 1; i >= 0; i--) {
+    str = str.replace(/,\s*$/, '');
+    str += stack[i];
+  }
+  
+  try { return JSON.parse(str); } catch (e) { return null; }
+}
+
+export const generateMealPlanStream = async function* (
   settings: UserSettings
-): Promise<MealPlanResponse> => {
-  // In production (Netlify), use the secure backend function to hide the API key
+): AsyncGenerator<MealPlanResponse, void, unknown> {
   if (import.meta.env.PROD) {
     const response = await fetch('/.netlify/functions/generate-meal-plan', {
       method: 'POST',
@@ -92,11 +124,23 @@ export const generateMealPlan = async (
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    if (!response.body) throw new Error("No response body");
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulatedText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      accumulatedText += decoder.decode(value, { stream: true });
+      const partial = parsePartialJSON(accumulatedText);
+      if (partial) yield partial;
+    }
+    return;
   }
 
   // In development (AI Studio), call Gemini directly from the frontend
-  // This allows the AI Studio proxy to intercept the request and use the free quota
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   
   const { gender, calories, cookingStyle, exclusions, preferences } = settings;
@@ -157,7 +201,7 @@ export const generateMealPlan = async (
     try {
       console.log(`Attempting generation with model: ${model}`);
       
-      const response = await ai.models.generateContent({
+      const stream = await ai.models.generateContentStream({
         model: model,
         contents: prompt,
         config: {
@@ -168,13 +212,18 @@ export const generateMealPlan = async (
         },
       });
 
-      if (response.text) {
-        return JSON.parse(response.text);
+      let accumulatedText = "";
+      for await (const chunk of stream) {
+        if (chunk.text) {
+          accumulatedText += chunk.text;
+          const partial = parsePartialJSON(accumulatedText);
+          if (partial) yield partial;
+        }
       }
+      return; // Success, exit the loop
     } catch (error: any) {
       console.warn(`Model ${model} failed:`, error.message);
       lastError = error;
-      // Wait 1.5 seconds before trying the next model to avoid burst rate limits
       await new Promise(resolve => setTimeout(resolve, 1500));
     }
   }

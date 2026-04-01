@@ -67,7 +67,7 @@ const MODELS_TO_TRY = [
   "gemini-3.1-flash-lite-preview"   // Fastest/Cheapest backup (500 RPD)
 ];
 
-export const handler = async (event: any, context: any) => {
+export default async (req: Request, context: any) => {
   // CORS headers for Netlify
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -75,29 +75,28 @@ export const handler = async (event: any, context: any) => {
     'Access-Control-Allow-Methods': 'POST, OPTIONS'
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+  if (req.method === 'OPTIONS') {
+    return new Response('', { status: 200, headers });
   }
 
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers, body: "Method Not Allowed" };
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405, headers });
   }
 
   // Use GEMINI_API_KEY (AI Studio standard) or API_KEY (User's Netlify setup)
   const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: "API Key is missing in environment variables. Please add GEMINI_API_KEY to your Netlify settings." })
-    };
+    return new Response(
+      JSON.stringify({ error: "API Key is missing in environment variables. Please add GEMINI_API_KEY to your Netlify settings." }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
   }
 
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    const settings = JSON.parse(event.body);
+    const settings = await req.json();
     const { gender, calories, cookingStyle, exclusions, preferences } = settings;
 
     const proteinGrams = Math.round((calories * 0.35) / 4);
@@ -156,7 +155,7 @@ export const handler = async (event: any, context: any) => {
       try {
         console.log(`Attempting generation with model: ${model}`);
         
-        const response = await ai.models.generateContent({
+        const responseStream = await ai.models.generateContentStream({
           model: model,
           contents: prompt,
           config: {
@@ -167,13 +166,30 @@ export const handler = async (event: any, context: any) => {
           },
         });
 
-        if (response.text) {
-          return {
-            statusCode: 200,
-            headers,
-            body: response.text,
-          };
-        }
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const chunk of responseStream) {
+                if (chunk.text) {
+                  controller.enqueue(new TextEncoder().encode(chunk.text));
+                }
+              }
+            } catch (streamErr) {
+              console.error("Stream error:", streamErr);
+            } finally {
+              controller.close();
+            }
+          }
+        });
+
+        return new Response(stream, {
+          status: 200,
+          headers: {
+            ...headers,
+            "Content-Type": "text/plain"
+          }
+        });
+
       } catch (error: any) {
         console.warn(`Model ${model} failed:`, error.message);
         lastError = error;
@@ -191,17 +207,19 @@ export const handler = async (event: any, context: any) => {
       else errorMessage += ` (${lastError.message})`;
     }
     
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: errorMessage })
-    };
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
 
   } catch (err: any) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message || "Internal Server Error" })
-    };
+    return new Response(
+      JSON.stringify({ error: err.message || "Internal Server Error" }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+    );
   }
+};
+
+export const config = {
+  path: "/.netlify/functions/generate-meal-plan"
 };

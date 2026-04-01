@@ -7,8 +7,8 @@ import MealCard from './components/MealCard';
 import DailySummary from './components/DailySummary';
 import ShoppingList from './components/ShoppingList';
 import LoadingState from './components/LoadingState';
-import { UserSettings, MealPlanResponse, Macro } from './types';
-import { generateMealPlan } from './services/geminiService';
+import { UserSettings, MealPlanResponse, Macro, Meal } from './types';
+import { generateMealPlanStream } from './services/geminiService';
 import { AlertCircle, Printer } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -31,12 +31,20 @@ const App: React.FC = () => {
     setError(null);
     // Clear previous results while loading to focus on the loading state
     setMealPlan(null); 
+    setSelections([]);
     
     try {
-      const data = await generateMealPlan(settings);
-      setMealPlan(data);
-      // Initialize selections: Select option 0 for all slots
-      setSelections(new Array(data.slots.length).fill(0));
+      for await (const partialPlan of generateMealPlanStream(settings)) {
+        setMealPlan(partialPlan);
+        setSelections(prev => {
+          if (partialPlan.slots && prev.length < partialPlan.slots.length) {
+            const next = [...prev];
+            while (next.length < partialPlan.slots.length) next.push(0);
+            return next;
+          }
+          return prev;
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -49,11 +57,11 @@ const App: React.FC = () => {
   };
 
   const handleSwap = (slotIndex: number) => {
-    if (!mealPlan) return;
+    if (!mealPlan || !mealPlan.slots || !mealPlan.slots[slotIndex]) return;
     setSelections(prev => {
       const next = [...prev];
-      const currentOption = next[slotIndex];
-      const totalOptions = mealPlan.slots[slotIndex].options.length;
+      const currentOption = next[slotIndex] || 0;
+      const totalOptions = mealPlan.slots[slotIndex].options?.length || 1;
       next[slotIndex] = (currentOption + 1) % totalOptions;
       return next;
     });
@@ -61,20 +69,21 @@ const App: React.FC = () => {
 
   // Compute the currently active set of meals based on selections
   const activeMeals = useMemo(() => {
-    if (!mealPlan || selections.length === 0) return [];
+    if (!mealPlan || !mealPlan.slots || selections.length === 0) return [];
     return mealPlan.slots.map((slot, index) => {
+      if (!slot?.options || slot.options.length === 0) return null;
       const selectedIndex = selections[index] || 0;
-      return slot.options[selectedIndex];
-    });
+      return slot.options[selectedIndex] || slot.options[0];
+    }).filter(Boolean) as Meal[];
   }, [mealPlan, selections]);
 
   // Compute summary dynamically from active meals
   const currentSummary: Macro = useMemo(() => {
     return activeMeals.reduce((acc, meal) => ({
-      calories: acc.calories + meal.macros.calories,
-      protein: acc.protein + meal.macros.protein,
-      carbs: acc.carbs + meal.macros.carbs,
-      fat: acc.fat + meal.macros.fat,
+      calories: acc.calories + (meal.macros?.calories || 0),
+      protein: acc.protein + (meal.macros?.protein || 0),
+      carbs: acc.carbs + (meal.macros?.carbs || 0),
+      fat: acc.fat + (meal.macros?.fat || 0),
     }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
   }, [activeMeals]);
 
@@ -104,7 +113,7 @@ const App: React.FC = () => {
 
           {isLoading && <LoadingState />}
 
-          {mealPlan && activeMeals.length > 0 && !isLoading && (
+          {mealPlan && activeMeals.length > 0 && (
              <div className="animate-fadeIn">
                
                <div className="flex items-center justify-between mb-6 print:mb-2">
@@ -125,16 +134,22 @@ const App: React.FC = () => {
                     <DailySummary summary={currentSummary} />
                     
                     <div className="space-y-4 print:space-y-6">
-                      {activeMeals.map((meal, index) => (
-                        <MealCard 
-                          key={`${index}-${selections[index]}`} // Force re-render on swap
-                          meal={meal} 
-                          slotTitle={mealPlan.slots[index].title}
-                          onSwap={() => handleSwap(index)}
-                          optionIndex={selections[index]}
-                          totalOptions={mealPlan.slots[index].options.length}
-                        />
-                      ))}
+                      {mealPlan.slots.map((slot, index) => {
+                        const selectedIndex = selections[index] || 0;
+                        const meal = slot?.options?.[selectedIndex] || slot?.options?.[0];
+                        if (!meal) return null;
+
+                        return (
+                          <MealCard 
+                            key={`${index}-${selectedIndex}`} // Force re-render on swap
+                            meal={meal} 
+                            slotTitle={slot?.title || `Meal ${index + 1}`}
+                            onSwap={() => handleSwap(index)}
+                            optionIndex={selectedIndex}
+                            totalOptions={slot?.options?.length || 1}
+                          />
+                        );
+                      })}
                     </div>
                  </div>
 

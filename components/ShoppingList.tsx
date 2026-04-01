@@ -13,7 +13,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ meals }) => {
     // Flatten and roughly deduplicate ingredients
     // Note: Perfect programmatic deduplication of natural language ingredients is hard without AI,
     // but we can do simple string cleaning.
-    const all = meals.flatMap(m => m.ingredients);
+    const all = meals.flatMap(m => m?.ingredients || []);
     const unique = Array.from(new Set(all.map(i => i.trim())));
     return unique.sort();
   }, [meals]);

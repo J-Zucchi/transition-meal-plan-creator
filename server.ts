@@ -6,7 +6,7 @@ dotenv.config();
 
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import { handler as generateMealPlanHandler } from "./netlify/functions/generate-meal-plan";
+import generateMealPlanHandler from "./netlify/functions/generate-meal-plan";
 import path from "path";
 
 async function startServer() {
@@ -18,20 +18,39 @@ async function startServer() {
 
   // Mock Netlify Function Endpoint for local development
   app.all("/.netlify/functions/generate-meal-plan", async (req, res) => {
-    const event = {
-      httpMethod: req.method,
-      body: JSON.stringify(req.body),
-      headers: req.headers,
+    const url = `http://localhost:${PORT}${req.url}`;
+    const init: RequestInit = {
+      method: req.method,
+      headers: req.headers as HeadersInit,
     };
-
-    const response = await generateMealPlanHandler(event, {});
-    
-    if (response.headers) {
-      for (const [key, value] of Object.entries(response.headers)) {
-        res.setHeader(key, value as string);
-      }
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      init.body = JSON.stringify(req.body);
     }
-    res.status(response.statusCode).send(response.body);
+    const webReq = new Request(url, init);
+
+    try {
+      const response = await generateMealPlanHandler(webReq, {});
+      
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+      res.status(response.status);
+      
+      if (response.body) {
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+        res.end();
+      } else {
+        res.end();
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Internal Server Error");
+    }
   });
 
   // Vite middleware for development
