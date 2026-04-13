@@ -52,8 +52,8 @@ const RESPONSE_SCHEMA = {
 
 // Priority list of models to try.
 const MODELS_TO_TRY = [
-  "gemini-3.1-flash-lite-preview",  // Fastest model to avoid Netlify timeouts
-  "gemini-3-flash-preview"          // Backup model
+  "gemini-3-flash-preview",         // Smartest Flash model
+  "gemini-3.1-flash-lite-preview"   // Fastest backup
 ];
 
 export default async (req: Request, context: any) => {
@@ -180,7 +180,7 @@ export default async (req: Request, context: any) => {
                   responseMimeType: "application/json",
                   responseSchema: RESPONSE_SCHEMA,
                   temperature: 0.7,
-                  thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+                  thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
                 },
               });
 
