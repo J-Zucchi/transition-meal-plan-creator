@@ -52,17 +52,6 @@ const RESPONSE_SCHEMA = {
   required: ["slots"],
 };
 
-const VARIETY_INSTRUCTIONS = [
-  "Focus on 'Classics made Healthy' - familiar tastes with better macros.",
-  "Incorporate a 'One-Pan' or 'Sheet-Pan' concept for dinner.",
-  "Focus on fresh, raw textures for lunch and warm, comforting textures for dinner.",
-  "Use common pantry spices to add flavor without complexity.",
-  "Try to include a breakfast that can be prepped in under 5 minutes.",
-  "Focus on high-volume foods to maximize satiety.",
-  "Incorporate a simple wrap or sandwich concept for lunch.",
-  "Ensure dinner feels substantial but uses standard supermarket ingredients.",
-];
-
 const MODELS_TO_TRY = [
   "gemini-3-flash-preview",         // Smartest Flash model (20 RPD)
   "gemini-3.1-flash-lite-preview"   // Fastest/Cheapest backup (500 RPD)
@@ -135,7 +124,12 @@ export const generateMealPlanStream = async function* (
       if (done) break;
       accumulatedText += decoder.decode(value, { stream: true });
       const partial = parsePartialJSON(accumulatedText);
-      if (partial) yield partial;
+      if (partial) {
+        if (partial.error) {
+          throw new Error(partial.error);
+        }
+        yield partial;
+      }
     }
     return;
   }
@@ -143,36 +137,49 @@ export const generateMealPlanStream = async function* (
   // In development (AI Studio), call Gemini directly from the frontend
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   
-  const { gender, calories, cookingStyle, exclusions, preferences } = settings;
+  const { gender, calories, creativityLevel, exclusions, preferences, previousMeals } = settings;
 
-  const proteinGrams = Math.round((calories * 0.35) / 4);
-  const carbGrams = Math.round((calories * 0.35) / 4);
-  const fatGrams = Math.round((calories * 0.30) / 9);
+  const proteinGrams = Math.round((calories * 0.33) / 4);
+  const carbGrams = Math.round((calories * 0.34) / 4);
+  const fatGrams = Math.round((calories * 0.33) / 9);
 
-  const randomInstruction = VARIETY_INSTRUCTIONS[Math.floor(Math.random() * VARIETY_INSTRUCTIONS.length)];
+  let creativityPrompt = "";
+  if (creativityLevel === 1) {
+    creativityPrompt = "Level 1: Quick & Simple. Focus on extreme simplicity. 5 ingredients or less. Minimal prep time. Use basic, familiar foods (e.g., basic proteins, standard veggies, simple carbs). Prioritize speed over culinary creativity, but ensure it remains tasty.";
+  } else if (creativityLevel === 3) {
+    creativityPrompt = "Level 3: Culinary & Creative. Focus on highly creative, 'Instagram-worthy' healthy meals. Draw inspiration from trending healthy recipes (e.g., cottage cheese flatbreads, macro-friendly bowls, unique sauces). Use bold flavor profiles, trendy health ingredients, and unique combinations. Make it exciting for a foodie who enjoys cooking and doesn't mind longer prep times.";
+  } else {
+    creativityPrompt = "Level 2: Balanced Variety. Focus on 'Classics made Healthy'. Flavorful but accessible. Use common pantry spices. Meals should be interesting but not require advanced cooking skills or obscure ingredients. Include simple wraps, bowls, and fun flavor ideas.";
+  }
+
+  const previousMealsText = previousMeals && previousMeals.length > 0 
+    ? `\n    Previous Meals Generated: ${previousMeals.join(', ')}\n    CRITICAL: Do not reuse more than 50% of these previous meals. Provide fresh, new ideas for the majority of the options.`
+    : "";
 
   const prompt = `
     You are an expert medical nutritionist for Transition Medical Weight Loss.
     Create a 1-day meal plan for a ${gender} patient with multiple options per meal.
     
     Target Calories: ${calories}
-    Cooking Style: ${cookingStyle}
+    Creativity Level: ${creativityLevel}
     Exclusions/Allergies: ${exclusions || "None"}
     Patient Preferences/Favorite Foods: ${preferences || "None"}
+    ${previousMealsText}
 
-    Nutritional Goals (35/35/30 Split):
-    - Protein: Approximately 35% of total calories. Target: ~${proteinGrams}g. (Allow +/- 5% variance).
-    - Carbs: Approximately 35% of total calories. Target: ~${carbGrams}g. (Allow +/- 5% variance).
-    - Fats: Approximately 30% of total calories. Target: ~${fatGrams}g. (Allow +/- 5% variance).
+    Nutritional Goals (33/34/33 Split):
+    - Protein: Approximately 33% of total calories. Target: ~${proteinGrams}g. (Allow +/- 5% variance).
+    - Carbs: Approximately 34% of total calories. Target: ~${carbGrams}g. (Allow +/- 5% variance).
+    - Fats: Approximately 33% of total calories. Target: ~${fatGrams}g. (Allow +/- 5% variance).
     
     *Guidance*: 
     - Ensure meals feel "normal" and sustainable within these macros.
     - Hydration: Implicitly encourage water intake.
 
     Style & Complexity Guidelines:
-    - KEEP IT SIMPLE: Use common supermarkets ingredients.
-    - REALISTIC: Ensure meals are easy to prepare.
-    - VARIETY HINT: ${randomInstruction}
+    ${creativityPrompt}
+    - Convenience Foods: Occasionally suggest specific, well-known brand products to make shopping easier (e.g., Quest bar, RX bar, Oikos Pro or Chobani zero sugar yogurt, Banza chickpea pasta, P3 protein snacks, Orgain 30 gram protein shake). Tap into the many other healthy, macro-friendly brands available on the market beyond just this list.
+    - Clinic Products: Occasionally (maximum 1 time per day) suggest the clinic's own products for a snack. Refer to them exactly as "Transition Protein Bar" (approx 150 calories, 15g protein, high fiber) or "Transition Protein Drink" (approx 70 calories, 15g protein). Do not overdo it.
+    - Leftovers: For Lunch, prioritize 'No-Cook' options, wraps, or meals that explicitly use leftovers from typical dinners to save time.
 
     Structure & Calorie Distribution:
     Generate exactly 5 meal slots in this order:
@@ -182,13 +189,17 @@ export const generateMealPlanStream = async function* (
     4. Afternoon Snack
     5. Dinner
     
-    Distribute the calories naturally across the 3 main meals and 2 snacks. Ensure that if a user picks ANY combination of options, the daily total will closely match the Target Calories (${calories}) and the daily macro goals.
+    Distribute the calories naturally across the 3 main meals and 2 snacks. The total daily calories for ANY combination of options MUST stay within +/- 100 calories of the Target Calories (${calories}).
+    To achieve this, ensure that Option A, Option B, and Option C for a given meal slot have very similar total calorie counts, even if their specific macros (protein/carbs/fat) vary based on the ingredients.
     
     CRITICAL INSTRUCTION:
     For EACH of the 5 slots, provide exactly 3 DISTINCT options (Option A, Option B, Option C).
-    - Ensure the 3 options are different in main ingredients/flavor (e.g., one egg-based, one yogurt-based, one oat-based).
+    - Ensure Option A, Option B, and Option C use completely different cooking methods, textures, and flavor profiles to maximize variety.
+    - Calculate macros based on the ACTUAL ingredients provided. Option A, Option B, and Option C MUST have slightly different macros based on their unique ingredients, but their TOTAL CALORIES should be roughly the same to keep the daily total stable. Do NOT copy/paste the exact same macro numbers across options.
+    - For the 'type' field, provide a short 1-2 word category tag (e.g., 'Egg-based', 'High-Protein', 'No-Cook', 'Grab-and-Go'). Do NOT repeat the title.
+    - All ingredients MUST include exact, easy-to-understand portion sizes (e.g., '4 oz grilled chicken breast', '1/2 cup cooked jasmine rice', '1 scoop whey protein'). Do not just list 'chicken' or 'rice'.
     - If the user specified preferences (e.g., "Italian"), ensure at least one option reflects that.
-    - Ensure all options fit the macro goals for that time of day.
+    - Ensure all options roughly fit the macro goals for that time of day, but accuracy of the food item is more important.
 
     Format Requirements:
     - Return strictly pure JSON matching the schema.
@@ -208,7 +219,7 @@ export const generateMealPlanStream = async function* (
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
           temperature: 0.7,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         },
       });
 

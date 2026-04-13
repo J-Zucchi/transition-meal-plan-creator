@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { UserSettings, Gender, CookingStyle } from '../types';
+import { UserSettings, Gender } from '../types';
 import { Clock, Sliders, ChefHat, Sparkles, Loader2 } from 'lucide-react';
 
 interface SettingsPanelProps {
@@ -22,8 +22,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSettings, on
     setSettings(prev => ({ ...prev, calories: Number(e.target.value) }));
   };
 
-  const handleStyleChange = (style: CookingStyle) => {
-    setSettings(prev => ({ ...prev, cookingStyle: style }));
+  const handleCreativityChange = (level: 1 | 2 | 3) => {
+    setSettings(prev => ({ ...prev, creativityLevel: level }));
   };
 
   const handleExclusionsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,29 +81,28 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSettings, on
            </div>
         </div>
 
-        {/* Cooking Style */}
+        {/* Creativity Level */}
         <div className="flex flex-col gap-2 lg:col-span-2">
-          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Cooking Style</label>
+          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Meal Complexity & Creativity</label>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 'Quick & Easy', icon: Clock, label: 'Quick' },
-              { id: 'Balanced Mix', icon: Sliders, label: 'Balanced' },
-              { id: 'Home Cooked', icon: ChefHat, label: 'Cooked' }
+              { id: 1, label: 'Quick & Simple', desc: 'Fast, few ingredients' },
+              { id: 2, label: 'Balanced Variety', desc: 'Healthy classics' },
+              { id: 3, label: 'Culinary & Creative', desc: 'Creative & trendy' }
             ].map((item) => {
-               const Icon = item.icon;
-               const isSelected = settings.cookingStyle === item.id;
+               const isSelected = settings.creativityLevel === item.id;
                return (
                  <button
                    key={item.id}
-                   onClick={() => handleStyleChange(item.id as CookingStyle)}
+                   onClick={() => handleCreativityChange(item.id as 1 | 2 | 3)}
                    className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all duration-200 ${
                      isSelected 
                       ? 'border-[#003B5C] bg-[#003B5C] text-white shadow-md transform scale-[1.02]' 
                       : 'border-gray-200 bg-white text-gray-600 hover:border-[#EAAA00] hover:text-[#003B5C]'
                    }`}
                  >
-                   <Icon className="w-5 h-5 mb-1" />
-                   <span className="text-xs font-medium">{item.label}</span>
+                   <span className="text-xs font-bold mb-0.5">{item.label}</span>
+                   <span className={`text-[10px] text-center leading-tight ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>{item.desc}</span>
                  </button>
                )
             })}

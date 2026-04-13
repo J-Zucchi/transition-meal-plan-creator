@@ -26,12 +26,12 @@ export interface MealPlanResponse {
 }
 
 export type Gender = 'Female' | 'Male';
-export type CookingStyle = 'Quick & Easy' | 'Balanced Mix' | 'Home Cooked';
 
 export interface UserSettings {
   gender: Gender;
   calories: number;
-  cookingStyle: CookingStyle;
+  creativityLevel: 1 | 2 | 3;
   exclusions: string;
   preferences: string;
+  previousMeals?: string[];
 }

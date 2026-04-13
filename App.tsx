@@ -15,7 +15,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings>({
     gender: 'Female',
     calories: 1100,
-    cookingStyle: 'Balanced Mix',
+    creativityLevel: 2,
     exclusions: '',
     preferences: '',
   });
@@ -29,12 +29,18 @@ const App: React.FC = () => {
   const handleGenerate = async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Capture previous meals to ensure variety on subsequent generations
+    const previousMeals = mealPlan 
+      ? mealPlan.slots.flatMap(slot => slot.options?.map(opt => opt.title).filter(Boolean) as string[])
+      : [];
+
     // Clear previous results while loading to focus on the loading state
     setMealPlan(null); 
     setSelections([]);
     
     try {
-      for await (const partialPlan of generateMealPlanStream(settings)) {
+      for await (const partialPlan of generateMealPlanStream({ ...settings, previousMeals })) {
         setMealPlan(partialPlan);
         setSelections(prev => {
           if (partialPlan.slots && prev.length < partialPlan.slots.length) {
