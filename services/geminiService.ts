@@ -158,7 +158,7 @@ export const generateMealPlanStream = async function* (
 
   const prompt = `
     You are an expert medical nutritionist for Transition Medical Weight Loss.
-    Create a 1-day meal plan for a ${gender} patient with multiple options per meal.
+    Create a 1-day meal plan for a ${gender} patient with exactly 2 options per meal.
     
     Target Calories: ${calories}
     Creativity Level: ${creativityLevel}
@@ -178,7 +178,7 @@ export const generateMealPlanStream = async function* (
     Style & Complexity Guidelines:
     ${creativityPrompt}
     - Convenience Foods: Occasionally suggest specific, well-known brand products to make shopping easier (e.g., Quest bar, RX bar, Oikos Pro or Chobani zero sugar yogurt, Banza chickpea pasta, P3 protein snacks, Orgain 30 gram protein shake). Tap into the many other healthy, macro-friendly brands available on the market beyond just this list.
-    - Clinic Products: Occasionally (maximum 1 time per day) suggest the clinic's own products for a snack. Refer to them exactly as "Transition Protein Bar" (approx 150 calories, 15g protein, high fiber) or "Transition Protein Drink" (approx 70 calories, 15g protein). Do not overdo it.
+    - Clinic Products: Occasionally suggest the clinic's own products for a snack. Refer to them exactly as "Transition Protein Bar" (approx 150 calories, 15g protein, high fiber) or "Transition Protein Drink" (a powder packet mixed with water, approx 70 calories, 15g protein). CRITICAL: You MUST NOT include more than ONE Transition product in the ENTIRE daily plan. If you suggest a Transition product for one snack, you CANNOT suggest it anywhere else.
     - Leftovers: For Lunch, prioritize 'No-Cook' options, wraps, or meals that explicitly use leftovers from typical dinners to save time.
 
     Structure & Calorie Distribution:
@@ -190,20 +190,19 @@ export const generateMealPlanStream = async function* (
     5. Dinner
     
     Distribute the calories naturally across the 3 main meals and 2 snacks. The total daily calories for ANY combination of options MUST stay within +/- 100 calories of the Target Calories (${calories}).
-    To achieve this, ensure that Option A, Option B, and Option C for a given meal slot have very similar total calorie counts, even if their specific macros (protein/carbs/fat) vary based on the ingredients.
+    To achieve this, ensure that Option A and Option B for a given meal slot have very similar total calorie counts, even if their specific macros (protein/carbs/fat) vary based on the ingredients.
     
     CRITICAL INSTRUCTION:
-    For EACH of the 5 slots, provide exactly 3 DISTINCT options (Option A, Option B, Option C).
-    - Ensure Option A, Option B, and Option C use completely different cooking methods, textures, and flavor profiles to maximize variety.
-    - Calculate macros based on the ACTUAL ingredients provided. Option A, Option B, and Option C MUST have slightly different macros based on their unique ingredients, but their TOTAL CALORIES should be roughly the same to keep the daily total stable. Do NOT copy/paste the exact same macro numbers across options.
+    For EACH of the 5 slots, provide exactly 2 DISTINCT options (Option A, Option B).
+    - Ensure Option A and Option B use completely different cooking methods, textures, and flavor profiles to maximize variety.
+    - Calculate macros based on the ACTUAL ingredients provided. Option A and Option B MUST have slightly different macros based on their unique ingredients, but their TOTAL CALORIES should be roughly the same to keep the daily total stable. Do NOT copy/paste the exact same macro numbers across options.
     - For the 'type' field, provide a short 1-2 word category tag (e.g., 'Egg-based', 'High-Protein', 'No-Cook', 'Grab-and-Go'). Do NOT repeat the title.
     - All ingredients MUST include exact, easy-to-understand portion sizes (e.g., '4 oz grilled chicken breast', '1/2 cup cooked jasmine rice', '1 scoop whey protein'). Do not just list 'chicken' or 'rice'.
     - If the user specified preferences (e.g., "Italian"), ensure at least one option reflects that.
     - Ensure all options roughly fit the macro goals for that time of day, but accuracy of the food item is more important.
 
     Format Requirements:
-    - Return strictly pure JSON matching the schema.
-    - No markdown formatting.
+    - Return strictly pure JSON matching the schema. No markdown formatting.
   `;
 
   let lastError: any = null;

@@ -35,7 +35,7 @@ const ClinicalTips: React.FC = () => {
             <span>Flexibility</span>
           </div>
           <p className="text-sm text-gray-200 leading-relaxed">
-            Use "Quick" for busy days, and "Balanced Mix" to enjoy a home-cooked dinner. Consistency is key.
+            Use the <strong>Meal Complexity</strong> tool to match your schedule. Choose "Quick & Simple" for busy days, or "Culinary & Creative" when you have time to cook. Consistency is key.
           </p>
         </div>
       </div>
