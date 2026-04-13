@@ -52,8 +52,8 @@ const RESPONSE_SCHEMA = {
 
 // Priority list of models to try.
 const MODELS_TO_TRY = [
-  "gemini-3-flash-preview",         // Smartest Flash model (20 RPD)
-  "gemini-3.1-flash-lite-preview"   // Fastest/Cheapest backup (500 RPD)
+  "gemini-3.1-flash-lite-preview",  // Fastest model to avoid Netlify timeouts
+  "gemini-3-flash-preview"          // Backup model
 ];
 
 export default async (req: Request, context: any) => {
@@ -107,7 +107,7 @@ export default async (req: Request, context: any) => {
 
     const prompt = `
       You are an expert medical nutritionist for Transition Medical Weight Loss.
-      Create a 1-day meal plan for a ${gender} patient with exactly 2 options per meal.
+      Create a 1-day meal plan for a ${gender} patient with multiple options per meal.
       
       Target Calories: ${calories}
       Creativity Level: ${creativityLevel}
@@ -139,12 +139,12 @@ export default async (req: Request, context: any) => {
       5. Dinner
       
       Distribute the calories naturally across the 3 main meals and 2 snacks. The total daily calories for ANY combination of options MUST stay within +/- 100 calories of the Target Calories (${calories}).
-      To achieve this, ensure that Option A and Option B for a given meal slot have very similar total calorie counts, even if their specific macros (protein/carbs/fat) vary based on the ingredients.
+      To achieve this, ensure that Option A, Option B, and Option C for a given meal slot have very similar total calorie counts, even if their specific macros (protein/carbs/fat) vary based on the ingredients.
       
       CRITICAL INSTRUCTION:
-      For EACH of the 5 slots, provide exactly 2 DISTINCT options (Option A, Option B).
-      - Ensure Option A and Option B use completely different cooking methods, textures, and flavor profiles to maximize variety.
-      - Calculate macros based on the ACTUAL ingredients provided. Option A and Option B MUST have slightly different macros based on their unique ingredients, but their TOTAL CALORIES should be roughly the same to keep the daily total stable. Do NOT copy/paste the exact same macro numbers across options.
+      For EACH of the 5 slots, provide exactly 3 DISTINCT options (Option A, Option B, Option C).
+      - Ensure Option A, Option B, and Option C use completely different cooking methods, textures, and flavor profiles to maximize variety.
+      - Calculate macros based on the ACTUAL ingredients provided. Option A, Option B, and Option C MUST have slightly different macros based on their unique ingredients, but their TOTAL CALORIES should be roughly the same to keep the daily total stable. Do NOT copy/paste the exact same macro numbers across options.
       - For the 'type' field, provide a short 1-2 word category tag (e.g., 'Egg-based', 'High-Protein', 'No-Cook', 'Grab-and-Go'). Do NOT repeat the title.
       - All ingredients MUST include exact, easy-to-understand portion sizes (e.g., '4 oz grilled chicken breast', '1/2 cup cooked jasmine rice', '1 scoop whey protein'). Do not just list 'chicken' or 'rice'.
       - If the user specified preferences (e.g., "Italian"), ensure at least one option reflects that.
