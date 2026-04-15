@@ -155,60 +155,25 @@ export default async (req: Request, context: any) => {
     `;
 
     let lastError: any = null;
+    let successfulStream: any = null;
 
     for (const model of MODELS_TO_TRY) {
       try {
         console.log(`Attempting generation with model: ${model}`);
         
-        const stream = new ReadableStream({
-          async start(controller) {
-            const encoder = new TextEncoder();
-            
-            // Keep-alive interval: Send a space character every 2 seconds
-            // This prevents Netlify's 10-second serverless function timeout
-            // while the AI is "thinking" (ThinkingLevel.HIGH).
-            // JSON.parse on the frontend will safely ignore leading whitespace.
-            const keepAlive = setInterval(() => {
-              controller.enqueue(encoder.encode(" "));
-            }, 2000);
-
-            try {
-              const responseStream = await ai.models.generateContentStream({
-                model: model,
-                contents: prompt,
-                config: {
-                  responseMimeType: "application/json",
-                  responseSchema: RESPONSE_SCHEMA,
-                  temperature: 0.7,
-                  thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-                },
-              });
-
-              for await (const chunk of responseStream) {
-                if (keepAlive) clearInterval(keepAlive);
-                if (chunk.text) {
-                  controller.enqueue(encoder.encode(chunk.text));
-                }
-              }
-            } catch (streamErr: any) {
-              if (keepAlive) clearInterval(keepAlive);
-              console.error("Stream error:", streamErr);
-              // If we fail here, we stream an error object because headers are already sent
-              controller.enqueue(encoder.encode(JSON.stringify({ error: streamErr.message || "Streaming failed" })));
-            } finally {
-              if (keepAlive) clearInterval(keepAlive);
-              controller.close();
-            }
-          }
+        successfulStream = await ai.models.generateContentStream({
+          model: model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: RESPONSE_SCHEMA,
+            temperature: 0.7,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
         });
 
-        return new Response(stream, {
-          status: 200,
-          headers: {
-            ...headers,
-            "Content-Type": "text/plain"
-          }
-        });
+        // If we reach here, the initial API request succeeded
+        break;
 
       } catch (error: any) {
         console.warn(`Model ${model} failed:`, error.message);
@@ -218,19 +183,60 @@ export default async (req: Request, context: any) => {
       }
     }
 
-    console.error("All models failed. Last error:", lastError);
-    
-    let errorMessage = "Failed to generate meal plan after multiple attempts.";
-    if (lastError?.message) {
-      if (lastError.message.includes("429")) errorMessage += " (Daily Quota Exceeded)";
-      else if (lastError.message.includes("403")) errorMessage += " (Access Denied)";
-      else errorMessage += ` (${lastError.message})`;
+    if (!successfulStream) {
+      console.error("All models failed. Last error:", lastError);
+      
+      let errorMessage = "Failed to generate meal plan after multiple attempts.";
+      if (lastError?.message) {
+        if (lastError.message.includes("429")) errorMessage += " (Daily Quota Exceeded)";
+        else if (lastError.message.includes("403")) errorMessage += " (Access Denied)";
+        else errorMessage += ` (${lastError.message})`;
+      }
+      
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        
+        // Keep-alive interval: Send a space character every 2 seconds
+        // This prevents Netlify's 10-second serverless function timeout
+        // while the AI is "thinking" (ThinkingLevel.HIGH).
+        // JSON.parse on the frontend will safely ignore leading whitespace.
+        const keepAlive = setInterval(() => {
+          controller.enqueue(encoder.encode(" "));
+        }, 2000);
+
+        try {
+          for await (const chunk of successfulStream) {
+            if (keepAlive) clearInterval(keepAlive);
+            if (chunk.text) {
+              controller.enqueue(encoder.encode(chunk.text));
+            }
+          }
+        } catch (streamErr: any) {
+          if (keepAlive) clearInterval(keepAlive);
+          console.error("Stream error:", streamErr);
+          // If we fail here, we stream an error object because headers are already sent
+          controller.enqueue(encoder.encode(JSON.stringify({ error: streamErr.message || "Streaming failed" })));
+        } finally {
+          if (keepAlive) clearInterval(keepAlive);
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        ...headers,
+        "Content-Type": "text/plain"
+      }
+    });
 
   } catch (err: any) {
     return new Response(
