@@ -221,8 +221,11 @@ export const generateMealPlanStream = async function* (
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
           temperature: 0.7,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
+
+        if (model.startsWith("gemini-3")) {
+          reqConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+        }
 
         const stream = await ai.models.generateContentStream({
           model: model,
