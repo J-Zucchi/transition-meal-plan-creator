@@ -54,7 +54,8 @@ const RESPONSE_SCHEMA = {
 const MODELS_TO_TRY = [
   "gemini-3-flash-preview",         // Smartest Flash model
   "gemini-3.1-flash-lite-preview",  // Fastest backup
-  "gemma-4-26b-a4b-it"              // High-capacity fallback for 503 errors
+  "gemini-2.5-flash",               // Reliable older model
+  "gemini-2.5-flash-lite"           // Reliable older lite model
 ];
 
 export default async (req: Request, context: any) => {
@@ -166,16 +167,12 @@ export default async (req: Request, context: any) => {
         try {
           console.log(`Attempting generation with model: ${model}, attempt: ${attempt}`);
           
-          const isGemma = model.toLowerCase().includes("gemma");
           const reqConfig: any = {
             responseMimeType: "application/json",
             responseSchema: RESPONSE_SCHEMA,
             temperature: 0.7,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           };
-          
-          if (!isGemma) {
-            reqConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
-          }
 
           successfulStream = await ai.models.generateContentStream({
             model: model,
