@@ -55,7 +55,7 @@ const RESPONSE_SCHEMA = {
 const MODELS_TO_TRY = [
   "gemini-3-flash-preview",         // Smartest Flash model
   "gemini-3.1-flash-lite-preview",  // Fastest backup
-  "gemma-4-26b"                     // High-capacity fallback for 503 errors
+  "gemma-4-26b-a4b-it"              // High-capacity fallback for 503 errors
 ];
 
 function parsePartialJSON(jsonString: string): any {
