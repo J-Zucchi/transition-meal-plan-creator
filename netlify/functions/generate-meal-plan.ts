@@ -158,43 +158,71 @@ export default async (req: Request, context: any) => {
     let successfulStream: any = null;
 
     for (const model of MODELS_TO_TRY) {
-      try {
-        console.log(`Attempting generation with model: ${model}`);
-        
-        successfulStream = await ai.models.generateContentStream({
-          model: model,
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-            temperature: 0.7,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-          },
-        });
+      let modelSuccess = false;
+      
+      // Retry loop for 503 errors (up to 3 attempts per model)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`Attempting generation with model: ${model}, attempt: ${attempt}`);
+          
+          successfulStream = await ai.models.generateContentStream({
+            model: model,
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: RESPONSE_SCHEMA,
+              temperature: 0.7,
+              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            },
+          });
 
-        // If we reach here, the initial API request succeeded
-        break;
+          modelSuccess = true;
+          break; // Success, break out of retry loop
 
-      } catch (error: any) {
-        console.warn(`Model ${model} failed:`, error.message);
-        lastError = error;
-        // Wait 1.5 seconds before trying the next model to avoid burst rate limits
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        } catch (error: any) {
+          console.warn(`Model ${model} attempt ${attempt} failed:`, error.message);
+          lastError = error;
+          
+          const errMsg = error.message || "";
+          
+          // If it's a 503 High Demand error, wait 2 seconds and retry the same model
+          if (errMsg.includes("503") || errMsg.includes("UNAVAILABLE")) {
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          } 
+          // If it's a 429 Quota Exceeded error, break to move to the next model immediately
+          else if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+            break;
+          } 
+          // For other errors, break to move to the next model
+          else {
+            break;
+          }
+        }
+      }
+      
+      if (modelSuccess) {
+        break; // Break out of the model loop if we got a successful stream
       }
     }
 
     if (!successfulStream) {
       console.error("All models failed. Last error:", lastError);
       
-      let errorMessage = "Failed to generate meal plan after multiple attempts.";
-      if (lastError?.message) {
-        if (lastError.message.includes("429")) errorMessage += " (Daily Quota Exceeded)";
-        else if (lastError.message.includes("403")) errorMessage += " (Access Denied)";
-        else errorMessage += ` (${lastError.message})`;
+      let userMessage = "An unexpected error occurred. Please try again. (Error 500)";
+      const errMsg = lastError?.message || "";
+      
+      if (errMsg.includes("503") || errMsg.includes("UNAVAILABLE")) {
+        userMessage = "Servers are currently experiencing high demand. Please wait a moment and try generating again. (Error 503)";
+      } else if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+        userMessage = "Daily limit reached. Please try again tomorrow. (Error 429)";
+      } else if (errMsg.includes("504") || errMsg.includes("DEADLINE_EXCEEDED")) {
+        userMessage = "The request took too long. Please try again. (Error 504)";
       }
       
       return new Response(
-        JSON.stringify({ error: errorMessage }),
+        JSON.stringify({ error: userMessage }),
         { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }

@@ -208,44 +208,70 @@ export const generateMealPlanStream = async function* (
   let lastError: any = null;
 
   for (const model of MODELS_TO_TRY) {
-    try {
-      console.log(`Attempting generation with model: ${model}`);
-      
-      const stream = await ai.models.generateContentStream({
-        model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA,
-          temperature: 0.7,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
-      });
+    let modelSuccess = false;
+    
+    // Retry loop for 503 errors (up to 3 attempts per model)
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`Attempting generation with model: ${model}, attempt: ${attempt}`);
+        
+        const stream = await ai.models.generateContentStream({
+          model: model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: RESPONSE_SCHEMA,
+            temperature: 0.7,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
+        });
 
-      let accumulatedText = "";
-      for await (const chunk of stream) {
-        if (chunk.text) {
-          accumulatedText += chunk.text;
-          const partial = parsePartialJSON(accumulatedText);
-          if (partial) yield partial;
+        let accumulatedText = "";
+        for await (const chunk of stream) {
+          if (chunk.text) {
+            accumulatedText += chunk.text;
+            const partial = parsePartialJSON(accumulatedText);
+            if (partial) yield partial;
+          }
+        }
+        
+        modelSuccess = true;
+        return; // Success, exit the generator
+      } catch (error: any) {
+        console.warn(`Model ${model} attempt ${attempt} failed:`, error.message);
+        lastError = error;
+        
+        const errMsg = error.message || "";
+        
+        if (errMsg.includes("503") || errMsg.includes("UNAVAILABLE")) {
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } else if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+          break;
+        } else {
+          break;
         }
       }
-      return; // Success, exit the loop
-    } catch (error: any) {
-      console.warn(`Model ${model} failed:`, error.message);
-      lastError = error;
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+    
+    if (modelSuccess) {
+      break;
     }
   }
 
   console.error("All models failed. Last error:", lastError);
   
-  let errorMessage = "Failed to generate meal plan after multiple attempts.";
-  if (lastError?.message) {
-    if (lastError.message.includes("429")) errorMessage += " (Daily Quota Exceeded)";
-    else if (lastError.message.includes("403")) errorMessage += " (Access Denied)";
-    else errorMessage += ` (${lastError.message})`;
+  let userMessage = "An unexpected error occurred. Please try again. (Error 500)";
+  const errMsg = lastError?.message || "";
+  
+  if (errMsg.includes("503") || errMsg.includes("UNAVAILABLE")) {
+    userMessage = "Servers are currently experiencing high demand. Please wait a moment and try generating again. (Error 503)";
+  } else if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+    userMessage = "Daily limit reached. Please try again tomorrow. (Error 429)";
+  } else if (errMsg.includes("504") || errMsg.includes("DEADLINE_EXCEEDED")) {
+    userMessage = "The request took too long. Please try again. (Error 504)";
   }
   
-  throw new Error(errorMessage);
+  throw new Error(userMessage);
 };
