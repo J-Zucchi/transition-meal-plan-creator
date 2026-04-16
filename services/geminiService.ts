@@ -53,8 +53,9 @@ const RESPONSE_SCHEMA = {
 };
 
 const MODELS_TO_TRY = [
-  "gemini-3-flash-preview",         // Smartest Flash model (20 RPD)
-  "gemini-3.1-flash-lite-preview"   // Fastest/Cheapest backup (500 RPD)
+  "gemini-3-flash-preview",         // Smartest Flash model
+  "gemini-3.1-flash-lite-preview",  // Fastest backup
+  "gemma-4-26b"                     // High-capacity fallback for 503 errors
 ];
 
 function parsePartialJSON(jsonString: string): any {
@@ -215,15 +216,21 @@ export const generateMealPlanStream = async function* (
       try {
         console.log(`Attempting generation with model: ${model}, attempt: ${attempt}`);
         
+        const isGemma = model.toLowerCase().includes("gemma");
+        const reqConfig: any = {
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA,
+          temperature: 0.7,
+        };
+        
+        if (!isGemma) {
+          reqConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+        }
+
         const stream = await ai.models.generateContentStream({
           model: model,
           contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-            temperature: 0.7,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-          },
+          config: reqConfig,
         });
 
         let accumulatedText = "";
