@@ -52,8 +52,9 @@ const RESPONSE_SCHEMA = {
 
 // Priority list of models to try.
 const MODELS_TO_TRY = [
+  "gemini-3.5-flash",               // Brand new latest model (20 RPD)
   "gemini-3-flash-preview",         // Smartest Flash model
-  "gemini-3.1-flash-lite-preview",  // Fastest backup
+  "gemini-3.1-flash-lite",          // Non-preview Lite fallback
   "gemini-2.5-flash",               // Reliable older model
   "gemini-2.5-flash-lite"           // Reliable older lite model
 ];

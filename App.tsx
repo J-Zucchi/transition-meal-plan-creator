@@ -35,27 +35,56 @@ const App: React.FC = () => {
       ? mealPlan.slots.flatMap(slot => slot.options?.map(opt => opt.title).filter(Boolean) as string[])
       : [];
 
-    // Clear previous results while loading to focus on the loading state
-    setMealPlan(null); 
-    setSelections([]);
-    
-    try {
-      for await (const partialPlan of generateMealPlanStream({ ...settings, previousMeals })) {
-        setMealPlan(partialPlan);
-        setSelections(prev => {
-          if (partialPlan.slots && prev.length < partialPlan.slots.length) {
-            const next = [...prev];
-            while (next.length < partialPlan.slots.length) next.push(0);
-            return next;
-          }
-          return prev;
-        });
+    const MAX_RETRIES = 3;
+    let success = false;
+    let finalError: string | null = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Client-side generation attempt ${attempt}/${MAX_RETRIES} starting...`);
+        setMealPlan(null); 
+        setSelections([]);
+        
+        let lastLoggedPlan: MealPlanResponse | null = null;
+
+        for await (const partialPlan of generateMealPlanStream({ ...settings, previousMeals })) {
+          lastLoggedPlan = partialPlan;
+          setMealPlan(partialPlan);
+          setSelections(prev => {
+            if (partialPlan.slots && prev.length < partialPlan.slots.length) {
+              const next = [...prev];
+              while (next.length < partialPlan.slots.length) next.push(0);
+              return next;
+            }
+            return prev;
+          });
+        }
+
+        // Quality assurance check: are there at least 4 generated meal slots?
+        // Prompt normally requests exactly 5. If we ended up with fewer than 4 or nothing, retry.
+        if (!lastLoggedPlan || !lastLoggedPlan.slots || lastLoggedPlan.slots.length < 4) {
+          throw new Error("Generation completed but was partial or incomplete.");
+        }
+
+        success = true;
+        break; // Successfully generated the full plan, exit the loop
+      } catch (err) {
+        console.warn(`Client-side generation attempt ${attempt} failed:`, err);
+        finalError = err instanceof Error ? err.message : "An unexpected error occurred.";
+        
+        // Wait a brief period (1.5 seconds) before retrying
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
-    } finally {
-      setIsLoading(false);
     }
+
+    if (!success) {
+      setError(finalError);
+      setMealPlan(null); // Clear broken/partial plans if error occurs on last retry
+    }
+    
+    setIsLoading(false);
   };
 
   const handlePrint = () => {

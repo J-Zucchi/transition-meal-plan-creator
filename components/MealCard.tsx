@@ -18,7 +18,7 @@ const MealCard: React.FC<MealCardProps> = ({ meal, slotTitle, onSwap, optionInde
       
       {/* Header / Summary View */}
       <div 
-        className="p-5 cursor-pointer print:p-0 print:mb-2"
+        className="p-5 cursor-pointer hover:bg-slate-50/40 transition-colors duration-150 print:p-0 print:mb-2"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex justify-between items-start">
@@ -62,12 +62,18 @@ const MealCard: React.FC<MealCardProps> = ({ meal, slotTitle, onSwap, optionInde
             
             {/* Description: Shown in header only on screen if collapsed. Hidden in print (shown in body instead). */}
             <div className={`${isExpanded ? 'hidden' : 'block'} print:hidden`}>
-               <p className="text-sm text-gray-500 mt-2 line-clamp-2">{meal?.description || ''}</p>
+               <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                 {meal?.description || ''}
+                 <span className="text-xs text-[#003B5C] font-semibold block mt-1 hover:underline print:hidden">
+                   Show recipe & instructions →
+                 </span>
+               </p>
             </div>
           </div>
           
-          <button className="text-gray-400 hover:text-[#003B5C] transition-colors print:hidden ml-4 mt-6">
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-[#003B5C] bg-slate-100 hover:bg-[#EAAA00] hover:text-[#003B5C] rounded-md transition-all print:hidden ml-4 mt-6 flex-shrink-0 shadow-sm">
+            <span>{isExpanded ? "Hide" : "Recipe"}</span>
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
 
