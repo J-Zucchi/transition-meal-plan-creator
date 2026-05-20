@@ -62,12 +62,12 @@ const MealCard: React.FC<MealCardProps> = ({ meal, slotTitle, onSwap, optionInde
             
             {/* Description: Shown in header only on screen if collapsed. Hidden in print (shown in body instead). */}
             <div className={`${isExpanded ? 'hidden' : 'block'} print:hidden`}>
-               <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                 {meal?.description || ''}
-                 <span className="text-xs text-[#003B5C] font-semibold block mt-1 hover:underline print:hidden">
-                   Show recipe & instructions →
-                 </span>
-               </p>
+               {meal?.description && (
+                 <p className="text-sm text-gray-500 mt-2 line-clamp-2">{meal.description}</p>
+               )}
+               <span className="text-xs text-[#003B5C] font-semibold block mt-2 hover:underline print:hidden">
+                 Show recipe & instructions →
+               </span>
             </div>
           </div>
           
